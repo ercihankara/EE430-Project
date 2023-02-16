@@ -1,0 +1,43 @@
+% code to calculate the formant freqs of the given signal
+% Ercihan Kara / 2375160
+% Beste Öztop / 2375624
+
+function freqs = formant_freq_calc(audio_sig, samp_freq)
+    % input: signal to be investigated and sampling rate
+    % output: formant frequency values of the input signal
+
+    % For the model order (for lpc function): (general rule) order = 2*(expected number of formants) + 2
+    % Order is 8 as 3 formants are expected
+    % Find the roots of the prediction polynomial returned by lpc function
+
+    coeffs = lpc(audio_sig, 8);
+    root_list = roots(coeffs);
+
+    % As LPCCs are real valued, the roots are in complex conjugate pairs
+    % Retain only the roots with one sign for the imaginary part for simplicity
+    root_list = root_list(imag(root_list) >= 0);
+
+    % Calculate the angles corresponding to these complex roots
+    ang_freqs = atan2(imag(root_list), real(root_list));
+
+    % Convert the angular frequencies to hertz for the comparisons later and sort
+    [frqs, indices] = sort(ang_freqs.*(samp_freq/(2*pi)));
+
+    % Calculate the bandwidths of the formants:
+    % Bandwidths of the formants are shown by the distance of the prediction polynomial zeros from the unit circle
+    band_width = -1/2 * (samp_freq/(2*pi)) * log(abs(root_list(indices)));
+
+    % Assuming formant frequencies should be greater than 80Hz with bandwidths less than 500 Hz
+    nn = 1;
+    for ind = 1:length(frqs)
+        if (frqs(ind) > 80 && band_width(ind) < 500)
+            freqs(nn) = frqs(ind);
+            nn = nn+1;
+        end
+    end
+
+%     % Find roots with magnitude > 1 (formants)
+%     rootss = root_list(abs(root_list) > 0.8);
+%     % Convert roots to formant frequencies
+%     freqs = sort(angle(rootss)*samp_freq/(2*pi), 'descend');
+end
